@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <title>Répartition des vélos</title>
+  <meta charset="utf-8">
+
+  <script src="leaflet.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="leaflet.css" />
+  <!-- Ajout des fichiers MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      color: #e0ffe0;
+      background: linear-gradient(120deg, #0f2027, #2c5364, #1a3c2b, #0f2027);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    @keyframes gradientBG {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+    h1 {
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      padding: 1rem 2.5rem;
+      background: rgba(34, 139, 34, 0.7);
+      border-radius: 20px;
+      border: 2px solid #00ff99;
+      box-shadow: 0 4px 24px 0 rgba(0,255,128,0.15);
+      font-size: 2.2rem;
+      letter-spacing: 2px;
+      text-align: center;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      text-shadow: 0 2px 8px #000a;
+    }
+
+    /* Panneau de contrôles modernisé avec meilleur espacement */
+    #controls-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 2rem;
+      justify-content: center;
+      margin-bottom: 3rem;
+      padding: 2.5rem;
+      background: rgba(15, 32, 27, 0.95);
+      border: 1px solid rgba(0, 255, 153, 0.3);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      max-width: 1400px;
+      width: 95%;
+      box-sizing: border-box;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 1rem;
+      background: rgba(26, 60, 43, 0.3);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 153, 0.1);
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    .control-group label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #a0ffcc;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 0;
+      opacity: 0.9;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      max-width: 1400px;
+    }
+    #map {
+      border: 2px solid #00ff99;
+      border-radius: 18px;
+      width: 95%;
+      max-width: 1200px;
+      height: 600px;
+      box-shadow: 0 6px 32px 0 rgba(0,255,128,0.13);
+    }
+    #description {
+      background: rgba(0, 32, 16, 0.85);
+      border: 2px solid #00ff99;
+      border-radius: 18px;
+      box-shadow: 0 6px 32px 0 rgba(0,255,128,0.09);
+      padding: 2rem 2.5rem;
+      width: 95%;
+      max-width: 1200px;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+    #description figcaption {
+      font-size: 1.3rem;
+      margin-bottom: 1.5rem;
+      color: #aaffcc;
+      text-shadow: 0 1px 4px #000a;
+      text-align: center;
+    }
+
+    /* Style pour l'image du graphique */
+    #description img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Styles pour les éléments de formulaire épurés */
+    select, input[type="date"], input[type="time"], button {
+      margin: 0;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 255, 153, 0.2);
+      background: rgba(26, 60, 43, 0.6);
+      color: #e0ffe0;
+      font-size: 0.95rem;
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      transition: all 0.2s ease;
+      box-shadow: none;
+      width: 100%;
+      min-height: 42px;
+      box-sizing: border-box;
+      max-width: 100%;
+    }
+
+    /* Styles spécifiques pour les inputs date et time */
+    input[type="date"], input[type="time"] {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Masquer les icônes par défaut qui peuvent dépasser */
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator {
+      background: transparent;
+      bottom: 0;
+      color: transparent;
+      cursor: pointer;
+      height: auto;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: auto;
+    }
+
+    select:focus, input[type="date"]:focus, input[type="time"]:focus {
+      outline: none;
+      border-color: rgba(0, 255, 153, 0.5);
+      background: rgba(26, 60, 43, 0.8);
+      box-shadow: 0 0 0 3px rgba(0, 255, 153, 0.1);
+    }
+
+    select:hover, input[type="date"]:hover, input[type="time"]:hover {
+      border-color: rgba(0, 255, 153, 0.4);
+      background: rgba(26, 60, 43, 0.7);
+    }
+
+    button {
+      background: linear-gradient(135deg, #00ff99, #00cc77);
+      color: #1a3c2b;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.85rem;
+      padding: 1rem 1.2rem;
+      box-sizing: border-box;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #33ffaa, #00ff99);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 255, 153, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    /* Style pour les options du select */
+    select option {
+      background: #1a3c2b;
+      color: #e0ffe0;
+      padding: 0.5rem;
+    }
+
+    /* Responsive design amélioré */
+    @media (max-width: 1200px) {
+      #controls-panel {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+        padding: 2rem;
+      }
+      
+      #map {
+        height: 500px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      #controls-panel {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      
+      .control-group {
+        padding: 1.2rem;
+        gap: 1rem;
+      }
+      
+      #map {
+        width: 98%;
+        height: 400px;
+      }
+      
+      #description {
+        width: 98%;
+        padding: 1.5rem;
+        min-height: 300px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      #controls-panel {
+        padding: 1rem;
+        gap: 1rem;
+      }
+      
+      .control-group {
+        padding: 0.8rem;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 0.8rem 1.5rem;
+      }
+      
+      #map {
+        height: 350px;
+      }
+      
+      #description {
+        padding: 1rem;
+      }
+    }
+  </style>
+</head>
+
+<body onload="load_data();">
+  <h1>Répartition des vélos Vélo'v</h1>
+  
+  <!-- Panneau de contrôles -->
+  <div id="controls-panel">
+    <div class="control-group">
+      <label for="graphe">Type d'affichage</label>
+      <select id="graphe" onchange="OnClickMenu()">
+        <optgroup label="Type de vélos">
+          <option value="type-electrique">Vélo électrique</option>
+          <option value="type-mecanique">Vélo mécanique</option>
+          <option value="type-borne">Bornes disponibles</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label for="date-debut">Date de début</label>
+      <input type="date" id="date-debut" value="2024-10-25" min="2024-10-25" max="2024-10-29" onchange="onDateChange()">
+    </div>
+
+    <div class="control-group">
+      <label for="heure-debut">Heure de début</label>
+      <input type="time" id="heure-debut" value="04:00" onchange="onTimeChange()">
+    </div>
+
+    <div class="control-group">
+      <label for="date-fin">Date de fin</label>
+      <input type="date" id="date-fin" value="2024-10-29" min="2024-10-25" max="2024-10-29" onchange="onDateChange()">
+    </div>
+
+    <div class="control-group">
+      <label for="heure-fin">Heure de fin</label>
+      <input type="time" id="heure-fin" value="04:00" onchange="onTimeChange()">
+    </div>
+
+    <div class="control-group">
+      <label for="periode">Période d'analyse</label>
+      <select id="periode" onchange="onPeriodChange()">
+        <option value="heure">Par heure</option>
+        <option value="jour">Par jour</option>
+        <option value="semaine">Par semaine</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <button onclick="updateVisualization()" type="button">
+        Actualiser la visualisation
+      </button>
+    </div>
+  </div>
+
+  <div id="container">
+    <div id="map"></div>  
+    
+    <div id="description">
+      <figure>
+        <figcaption id="titre">Sélectionnez une station sur la carte pour voir les détails</figcaption>
+        <img src="" id="image" width="500"/>
+        <div id="stats-container" style="text-align: center; color: #baffd9;">
+          <p id='text'>Cliquez sur une station pour afficher l'historique des disponibilités</p>
+          <p style="font-size: 0.9rem; margin-top: 1rem; opacity: 0.8;">
+            Données disponibles du 25 octobre au 29 octobre 2024
+          </p>
+        </div>
+      </figure>
+      <div id='liste_stations'><input type="hidden" id="stations-selec" value=""></div>
+    </div>
+  </div>
+  
+  <script src="carte_interactive.js"></script>
+
+</body>
+</html>
